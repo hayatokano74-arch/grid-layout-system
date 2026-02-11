@@ -427,6 +427,422 @@ Align all vertical spacing to a baseline unit:
 .article > .wide       { grid-column: full; max-width: 1200px; margin-inline: auto; width: 100%; padding-inline: var(--grid-margin); }
 ```
 
+### Bento Grid
+Irregular card sizes inspired by Apple's design language (2025-2026 trend).
+
+```css
+.bento {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(180px, auto);
+  gap: var(--space-sm);
+}
+.bento-wide   { grid-column: span 2; }
+.bento-tall   { grid-row: span 2; }
+.bento-hero   { grid-column: span 2; grid-row: span 2; }
+.bento-full   { grid-column: 1 / -1; }
+
+@media (max-width: 768px) {
+  .bento { grid-template-columns: repeat(2, 1fr); }
+  .bento-hero { grid-column: 1 / -1; }
+}
+```
+
+```html
+<!-- Tailwind -->
+<div class="grid grid-cols-4 auto-rows-[minmax(180px,auto)] gap-2 md:grid-cols-2">
+  <div class="col-span-2 row-span-2">Hero</div>
+  <div class="col-span-2">Wide</div>
+  <div class="row-span-2">Tall</div>
+</div>
+```
+
+---
+
+## Responsive Image System
+
+### Art Direction with `<picture>`
+```html
+<!-- Different crops for different screens -->
+<picture>
+  <source media="(min-width: 1024px)" srcset="hero-wide.webp" />
+  <source media="(min-width: 640px)" srcset="hero-medium.webp" />
+  <img src="hero-mobile.webp" alt="" loading="lazy" decoding="async" />
+</picture>
+```
+
+### Aspect Ratio System
+Standardized ratios for consistent visual rhythm:
+
+| Ratio | Use Case | CSS |
+|-------|----------|-----|
+| 1:1 | Avatars, thumbnails, icons | `aspect-ratio: 1` |
+| 4:3 | Cards, standard photos | `aspect-ratio: 4/3` |
+| 3:2 | Landscape photos, galleries | `aspect-ratio: 3/2` |
+| 16:9 | Videos, hero banners, wide images | `aspect-ratio: 16/9` |
+| 21:9 | Cinematic, ultra-wide banners | `aspect-ratio: 21/9` |
+| 2:3 | Portrait photos, mobile cards | `aspect-ratio: 2/3` |
+| auto | Original ratio preserved | `aspect-ratio: auto` or `width/height` |
+
+```css
+.img-container {
+  aspect-ratio: 3/2;
+  overflow: hidden;
+  border-radius: var(--radius-md, 8px);
+}
+.img-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+```
+
+### Responsive Image Sizing
+```html
+<!-- sizes attribute guides the browser to download the correct size -->
+<img
+  src="photo.jpg"
+  srcset="photo-400.webp 400w, photo-800.webp 800w, photo-1200.webp 1200w, photo-1600.webp 1600w"
+  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  alt=""
+  loading="lazy"
+  decoding="async"
+/>
+```
+
+### Lazy Loading Strategy
+- **Above the fold** (hero, first visible images): `loading="eager"` or omit attribute, add `fetchpriority="high"`
+- **Below the fold** (everything else): `loading="lazy"` + `decoding="async"`
+- **Background images**: Use `content-visibility: auto` on the parent container
+- **Blur placeholder**: Use tiny base64 thumbnail or CSS gradient as placeholder
+
+---
+
+## Animation & Transitions
+
+### Layout Transition Guidelines
+- **Duration**: 200-300ms for UI interactions, 400-600ms for page transitions
+- **Easing**: `cubic-bezier(0.4, 0, 0.2, 1)` (Material standard) or `ease-out` for entrances
+- **Properties to animate**: `transform`, `opacity` only for 60fps (avoid animating `width`, `height`, `margin`, `padding`)
+- **Reduced motion**: Always respect `prefers-reduced-motion`
+
+```css
+/* Base transition for interactive elements */
+.transition-base {
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+
+/* Reduced motion override — REQUIRED */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+```
+
+### View Transitions API (2026)
+```css
+/* Cross-page transitions */
+@view-transition {
+  navigation: auto;
+}
+
+/* Named elements persist across pages */
+.hero-image {
+  view-transition-name: hero;
+}
+
+::view-transition-old(hero) {
+  animation: fade-out 300ms ease-out;
+}
+::view-transition-new(hero) {
+  animation: fade-in 300ms ease-in;
+}
+```
+
+### Scroll-driven Animations
+```css
+/* Fade in on scroll */
+.reveal {
+  animation: reveal linear both;
+  animation-timeline: view();
+  animation-range: entry 0% entry 100%;
+}
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+```
+
+---
+
+## Z-index Layer System
+
+Manage stacking with a token-based system to prevent z-index wars:
+
+```css
+:root {
+  --z-base:      0;      /* Default layer */
+  --z-raised:    1;      /* Cards, elevated surfaces */
+  --z-dropdown:  100;    /* Dropdowns, select menus */
+  --z-sticky:    200;    /* Sticky headers, sidebars */
+  --z-overlay:   300;    /* Overlays, backdrops */
+  --z-modal:     400;    /* Modal dialogs */
+  --z-popover:   500;    /* Popovers, tooltips */
+  --z-toast:     600;    /* Toast notifications */
+  --z-max:       9999;   /* Debug overlays only */
+}
+```
+
+### Rules
+- Never use arbitrary z-index values — always use tokens
+- Create new stacking contexts with `isolation: isolate` to contain z-index scope
+- Modals and overlays should trap focus and use `inert` attribute on background content
+- Sticky elements: use `--z-sticky`, not a random high number
+
+```css
+/* Create a stacking context to contain child z-indices */
+.card { isolation: isolate; }
+.card-overlay { position: absolute; z-index: var(--z-raised); }
+```
+
+---
+
+## Border & Divider System
+
+### Border Tokens
+```css
+:root {
+  /* Widths */
+  --border-thin:   1px;
+  --border-medium: 2px;
+  --border-thick:  4px;
+
+  /* Radius */
+  --radius-none: 0;
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* Shorthand */
+  --border-default: var(--border-thin) solid var(--color-border-light);
+  --border-strong:  var(--border-thin) solid var(--color-border);
+}
+```
+
+### Divider Patterns
+```css
+/* Horizontal divider */
+.divider {
+  border: 0;
+  border-top: var(--border-default);
+  margin-block: var(--space-lg);
+}
+
+/* Vertical divider (between flex/grid items) */
+.divider-vertical {
+  width: var(--border-thin);
+  align-self: stretch;
+  background: var(--color-border-light);
+}
+
+/* Section divider with more spacing */
+.divider-section {
+  border: 0;
+  border-top: var(--border-default);
+  margin-block: var(--space-xl);
+}
+```
+
+### Rules
+- Use `--border-thin` (1px) for most dividers and card borders
+- Use `--border-medium` (2px) for active states, focus rings, emphasized sections
+- Use `--radius-md` (8px) as the default for cards and containers
+- Always use `border-color` from the color system, never hardcoded values
+
+---
+
+## Grid Nesting Guidelines
+
+### When to use Subgrid vs Nested Grid
+
+| Scenario | Use | Reason |
+|----------|-----|--------|
+| Card grid where headers/footers must align across cards | **Subgrid** | Children inherit parent grid lines |
+| Dashboard with independent widget layouts | **Nested Grid** | Each widget has its own internal structure |
+| Form with label-input pairs inside a page grid | **Subgrid** | Labels and inputs align with page columns |
+| Sidebar content independent from main grid | **Nested Grid** | Sidebar has its own spacing rules |
+
+### Nesting Rules
+- **Maximum nesting depth**: 3 levels (page → section → component)
+- **Subgrid**: Use when children need to align with ancestor grid lines
+- **Nested grid**: Use when the inner layout is self-contained
+- **Never nest more than 2 grid definitions without subgrid** — it creates maintenance complexity
+
+```css
+/* Level 1: Page grid */
+.page {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--grid-gutter);
+}
+
+/* Level 2: Section inherits page columns */
+.section {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+/* Level 3: Component with own grid (not subgrid) */
+.card-inner {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-sm);
+}
+```
+
+---
+
+## Performance Optimization
+
+### CSS Containment
+```css
+/* Isolate layout recalculations to specific containers */
+.card {
+  contain: layout style;  /* paint causes issues with overflow */
+}
+
+/* For off-screen or below-fold sections */
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;  /* estimated height to prevent layout shift */
+}
+```
+
+### Performance Rules
+- Use `content-visibility: auto` for long pages with many sections (reduces initial rendering cost by up to 50%)
+- Set `contain-intrinsic-size` to prevent Cumulative Layout Shift (CLS)
+- Use `will-change` sparingly — only on elements about to animate, remove after animation completes
+- Avoid layout thrashing: never read layout properties (offsetHeight, getBoundingClientRect) then immediately write styles
+- Prefer `transform: translate()` over `top/left` for positional animation
+- Use `gap` instead of margins between grid items — fewer box model calculations
+
+```css
+/* WRONG: will-change on static element */
+.card { will-change: transform; }
+
+/* RIGHT: will-change only during interaction */
+.card:hover { will-change: transform; }
+.card.animating { will-change: transform; }
+```
+
+### Image Performance
+- Use `<img>` with `width` and `height` attributes to reserve space (prevents CLS)
+- Use WebP/AVIF with `<picture>` fallback
+- Inline critical above-the-fold images as base64 only if < 1KB
+- Use `fetchpriority="high"` for LCP (Largest Contentful Paint) images
+
+---
+
+## Grid Debugging
+
+### Visual Grid Overlay (development only)
+```css
+/* Add to any container to see its grid lines */
+.debug-grid {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.05) 0px,
+      rgba(255, 0, 0, 0.05) calc((100% - (var(--grid-columns) - 1) * var(--grid-gutter)) / var(--grid-columns)),
+      transparent calc((100% - (var(--grid-columns) - 1) * var(--grid-gutter)) / var(--grid-columns)),
+      transparent calc((100% - (var(--grid-columns) - 1) * var(--grid-gutter)) / var(--grid-columns) + var(--grid-gutter))
+    );
+}
+
+/* 8px baseline grid overlay */
+.debug-baseline {
+  background-image:
+    linear-gradient(
+      rgba(0, 150, 255, 0.08) 1px,
+      transparent 1px
+    );
+  background-size: 100% 8px;
+}
+```
+
+### Browser DevTools
+- **Chrome**: Elements panel → select grid container → click "grid" badge → shows grid overlay
+- **Firefox**: Best grid inspector — Elements panel → Layout tab → check grid containers
+- **Safari**: Elements panel → select grid → Layout panel
+
+### Debug Component (React)
+```tsx
+// Only renders in development
+function GridOverlay({ columns = 12 }: { columns?: number }) {
+  if (process.env.NODE_ENV !== "development") return null;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999, pointerEvents: "none",
+      display: "grid",
+      gridTemplateColumns: `repeat(${columns}, 1fr)`,
+      gap: "var(--grid-gutter)",
+      padding: "0 var(--grid-margin)",
+      maxWidth: "var(--grid-max-width)",
+      marginInline: "auto",
+    }}>
+      {Array.from({ length: columns }, (_, i) => (
+        <div key={i} style={{ background: "rgba(255,0,0,0.06)", height: "100vh" }} />
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## Anti-patterns (What NOT to Do)
+
+### Spacing
+- **NEVER** use arbitrary magic numbers (`margin: 13px`, `padding: 37px`). Always use the 8px grid scale.
+- **NEVER** mix spacing systems (some margins in rem, others in px, others in em)
+- **NEVER** use `margin: auto` as a substitute for proper grid alignment
+
+### Grid Layout
+- **NEVER** use `float` for layout (use CSS Grid or Flexbox)
+- **NEVER** nest more than 3 grid levels without subgrid
+- **NEVER** use `position: absolute` for layout that CSS Grid can handle
+- **NEVER** set fixed heights on grid containers (`height: 600px`) — use `min-height` or content-based sizing
+- **NEVER** use `!important` on grid properties — fix the specificity instead
+
+### Responsiveness
+- **NEVER** hide content with `display: none` on mobile as a "responsive" solution — restructure the layout instead
+- **NEVER** use horizontal scroll for critical content on mobile
+- **NEVER** set `max-width` in pixels on images without `width: 100%`
+- **NEVER** rely solely on viewport width — use container queries for components
+
+### Typography
+- **NEVER** set line-height below 1.4 for body text (1.7 for CJK)
+- **NEVER** use `px` for font-size in production — use `rem` or `clamp()`
+- **NEVER** exceed 75ch line width for body text
+- **NEVER** use the Latin default line-height (1.5) for Japanese text
+
+### Performance
+- **NEVER** apply `will-change` to more than 2-3 elements simultaneously
+- **NEVER** animate `width`, `height`, `margin`, or `padding` — use `transform` and `opacity`
+- **NEVER** use `box-shadow` animations — animate a pseudo-element's `opacity` instead
+- **NEVER** skip `width` and `height` attributes on `<img>` tags (causes CLS)
+
+### Z-index
+- **NEVER** use `z-index: 99999` or arbitrary large numbers — use the token system
+- **NEVER** set z-index without also setting `position` (it has no effect on static elements)
+
 ---
 
 ## Component Templates

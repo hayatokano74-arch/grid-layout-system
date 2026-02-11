@@ -9,8 +9,9 @@ Enforces consistent, accessible, responsive grid rules across all your web proje
 
 ## Features / 機能
 
+### Core / コア機能
 - **8px base grid** — 8pxグリッドを基準としたFluidスペーシング（clamp関数ベース）
-- **6 grid types** — 12カラム、非対称、エディトリアル、自動レスポンシブ（RAM）、モジュラー、Subgrid の6種
+- **7 grid types** — 12カラム、非対称、エディトリアル、自動レスポンシブ（RAM）、モジュラー、Subgrid、Bento の7種
 - **Fluid typography** — Modular Scaleとclamp()によるFluidタイポグラフィ
 - **CJK typography** — 日本語・中国語・韓国語対応（行送り1.7〜2.0、字間、縦書き、font-feature-settings）
 - **Dark mode** — WCAG準拠のダークモード配色テンプレート
@@ -19,6 +20,17 @@ Enforces consistent, accessible, responsive grid rules across all your web proje
 - **Component generation** — Container, Grid, Section, SplitLayout 等のコンポーネント自動生成
 - **Dual output** — 素のCSSとTailwind CSS両方に対応
 - **Two modes** — 常時バックグラウンド適用 + `/grid` コマンドによる対話型セットアップ
+
+### v1.1 新機能 / New in v1.1
+- **Bento grid** — Apple風の不規則カードレイアウト（span-2, featured等のバリエーション）
+- **Responsive images** — `<picture>` / `srcset` / アスペクト比 / 遅延読み込みの完全ガイド
+- **Animation & transitions** — View Transitions API、スクロール駆動アニメーション、reduced-motion対応
+- **Z-index layer system** — トークンベースの重なり順管理（base → modal → toast の7層）
+- **Border & divider system** — ボーダートークン、角丸スケール、セパレータパターン
+- **Grid nesting guidelines** — Subgrid vs ネストグリッドの使い分け、最大深度ルール
+- **Performance optimization** — CSS containment、content-visibility、will-change の最適化ルール
+- **Grid debugging** — ビジュアルオーバーレイ、React デバッグコンポーネント
+- **Anti-patterns** — やってはいけないことの包括的リスト（コード例付き）
 
 ---
 
@@ -58,6 +70,9 @@ Once installed, the skill automatically enforces grid rules whenever Claude writ
 - 色はCSS変数で管理（ダークモード対応） / Colors use CSS custom properties
 - テキスト幅は65chを超えない / Text width never exceeds 65ch
 - タッチターゲットは最低48x48px / Touch targets are minimum 48x48px
+- z-indexはトークンで管理 / Z-index uses token system
+- アニメーションはreduced-motion対応 / Animations respect reduced-motion
+- 画像は遅延読み込み / Images use lazy loading by default
 
 何もしなくても自動で機能します。 / You don't need to do anything — it just works.
 
@@ -148,9 +163,36 @@ Claude: グリッドシステムを生成中... / Generating grid system...
 | **12-column** | 一般的なWebサイト / General websites | 2,3,4,6分割が可能 |
 | **Asymmetric** | ポートフォリオ、クリエイティブ / Portfolios | 比率ベース（黄金比、2:1） |
 | **Editorial** | ブログ、記事 / Blog, articles | 65ch幅 + フルブリード |
-| **Auto-responsive** | カードグリッド / Card grids | メディアクエリ不要 |
+| **Auto-responsive (RAM)** | カードグリッド / Card grids | メディアクエリ不要 |
 | **Modular** | ダッシュボード / Dashboards | 行×列のアライメント |
 | **Subgrid** | カードレイアウト / Card layouts | コンテナ間の揃え |
+| **Bento** | Apple風プロモ / Apple-style promo | 不規則カード、span-2対応 |
+
+### Z-index Layer System / Z-indexレイヤーシステム
+
+| Token | Value | 用途 / Use Case |
+|-------|-------|-----------------|
+| `--z-base` | 0 | 通常のコンテンツ / Normal content |
+| `--z-dropdown` | 100 | ドロップダウン / Dropdowns |
+| `--z-sticky` | 200 | 固定ヘッダー / Sticky headers |
+| `--z-overlay` | 300 | オーバーレイ背景 / Overlay backdrops |
+| `--z-modal` | 400 | モーダル / Modals |
+| `--z-popover` | 500 | ポップオーバー / Popovers |
+| `--z-toast` | 600 | 通知トースト / Toast notifications |
+
+### Border & Divider System / ボーダー＆ディバイダー
+
+```css
+/* ボーダートークン / Border tokens */
+--border-thin: 1px solid var(--line-light);
+--border-medium: 2px solid var(--line);
+--border-thick: 3px solid var(--line);
+
+/* 角丸スケール / Border radius scale */
+--radius-sm: 4px;   --radius-md: 8px;
+--radius-lg: 12px;  --radius-xl: 16px;
+--radius-full: 9999px;
+```
 
 ### CJK Support / CJKサポート
 
@@ -177,6 +219,63 @@ Built-in rules ensure WCAG compliance:
 - キーボード操作 / Keyboard-accessible focus order
 - 論理的なDOM順序 / Logical DOM order matching visual order
 
+### Responsive Images / レスポンシブ画像
+
+画像の最適化ルールが組み込まれています。
+
+Built-in image optimization rules:
+
+- `<picture>` + `<source>` によるフォーマット切り替え（WebP/AVIF）
+- `srcset` + `sizes` によるレスポンシブ画像
+- アスペクト比の保持（`aspect-ratio` プロパティ）
+- 遅延読み込み（`loading="lazy"` + `decoding="async"`）
+- ファーストビュー画像は `loading="eager"` + `fetchpriority="high"`
+
+### Animation & Transitions / アニメーション
+
+モダンなアニメーションパターンを内蔵しています。
+
+Modern animation patterns included:
+
+- View Transitions API によるページ遷移
+- スクロール駆動アニメーション（`animation-timeline: scroll()`）
+- `prefers-reduced-motion` の自動対応
+- GPU最適化（`transform` / `opacity` のみ）
+- グリッドアニメーション用のイージング関数セット
+
+### Performance / パフォーマンス
+
+CSSパフォーマンス最適化ルールが含まれています。
+
+CSS performance optimization rules:
+
+- `contain: layout style` によるレイアウト分離
+- `content-visibility: auto` による画面外レンダリング最適化
+- `will-change` の適切な使用ルール（常時指定の禁止）
+- グリッドの最大ネスト深度: 3層まで
+
+### Grid Debugging / グリッドデバッグ
+
+開発中のグリッド確認ツールが含まれています。
+
+Development tools for grid verification:
+
+- CSSオーバーレイ（12カラムグリッド可視化）
+- Reactデバッグコンポーネント（`<GridDebugOverlay />`）
+- ブレークポイントインジケーター（現在のブレークポイントを画面表示）
+
+### Anti-patterns / アンチパターン
+
+やってはいけないことの包括的リストが含まれています。
+
+Comprehensive "what NOT to do" list:
+
+- `grid-template-columns` の固定px値指定の禁止
+- `!important` の使用禁止（リセットCSS以外）
+- `margin` によるグリッドアイテム配置の禁止
+- マジックナンバー（未定義の値）の使用禁止
+- 深すぎるネスト（4層以上）の禁止
+
 ---
 
 ## Example Output / 出力例
@@ -198,6 +297,13 @@ Built-in rules ensure WCAG compliance:
   --font-base: clamp(1rem, 0.93rem + 0.36vw, 1.125rem);
   --font-xl: clamp(1.5rem, 1.14rem + 1.79vw, 2.5rem);
   /* ... */
+
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  /* ... */
 }
 ```
 
@@ -211,6 +317,21 @@ Built-in rules ensure WCAG compliance:
   --space-sm: clamp(0.5rem, 0.36rem + 0.71vw, 1rem);
   --space-md: clamp(1rem, 0.71rem + 1.43vw, 2rem);
   /* ... */
+}
+```
+
+### Bento Grid
+
+```css
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(180px, auto);
+  gap: var(--space-md);
+}
+.bento-grid .featured {
+  grid-column: span 2;
+  grid-row: span 2;
 }
 ```
 
@@ -230,7 +351,7 @@ Built-in rules ensure WCAG compliance:
 ## Compatibility / 対応環境
 
 - **Browsers / ブラウザ**: Chrome, Firefox, Safari, Edge（全モダンブラウザ）
-- **CSS Features / CSS機能**: CSS Grid, Subgrid, Container Queries, clamp(), Logical Properties
+- **CSS Features / CSS機能**: CSS Grid, Subgrid, Container Queries, clamp(), Logical Properties, View Transitions API, Scroll-driven Animations, `content-visibility`
 - **Frameworks / フレームワーク**: Vanilla CSS, Tailwind CSS v3/v4, React, Next.js, Vue, Astro 等
 - **Languages / 言語**: English, Japanese, Chinese, Korean（CJK対応内蔵）
 
@@ -252,3 +373,5 @@ Issues and pull requests are welcome. Please follow these guidelines:
 - 複数のプロジェクトタイプ（ポートフォリオ、SaaS、ブログ）でテストする
 - 新しいパターンには素のCSSとTailwindの両方の例を含める
 - CJKタイポグラフィルールを維持する
+- アンチパターンには必ず正しい代替案を含める / Always include correct alternatives for anti-patterns
+- パフォーマンスに影響する変更はベンチマークを添える / Include benchmarks for performance-related changes
